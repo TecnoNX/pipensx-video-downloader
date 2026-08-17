@@ -1,0 +1,40 @@
+# Build output
+build-pc/
+build-golden/
+build-switch/
+*.o
+*.nro
+*.elf
+*.a
+*.so
+pipensx-video-downloader
+
+# Logs
+*.log
+pipensx.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config with secrets
+config.json
+secrets.json
+*.env
+
+# Test fixtures
+tests/fixtures/*.bin
+tests/golden/*.png
+
+# Bug reports
+bug-reports/
+
+# Vendor overrides (keep vendored libs in repo)
+vendor/
