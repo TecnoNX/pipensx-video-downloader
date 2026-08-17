@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <stddef.h>
-#include "../core/metainfo.h"
+#include "metainfo.h"
 
 typedef int (*tracker_cancel_cb)(void *user);
 

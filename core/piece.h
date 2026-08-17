@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <pthread.h>
-#include "../core/metainfo.h"
+#include "metainfo.h"
 #include "../platform/storage.h"
 
 #define BLOCK_SIZE  (16*1024)  /* 16 KB — standard BitTorrent block */

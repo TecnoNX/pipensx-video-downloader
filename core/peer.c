@@ -1,7 +1,7 @@
 #include "peer.h"
 #include "bencode.h"
 #include "util.h"
-#include "utp.h"
+#include "../core/libutp/utp.h"
 /* bf_set/bf_has come from util.h */
 #include <stdlib.h>
 #include <string.h>

@@ -1,10 +1,12 @@
+/* POSIX+GNU extensions for getaddrinfo, clock_gettime, CLOCK_MONOTONIC, etc. */
+#define _GNU_SOURCE
 #include "torrent.h"
 #include "piece.h"
 #include "tracker.h"
 #include "net.h"
 #include "peer.h"
 #include "util.h"
-#include "utp.h"
+#include "../core/libutp/utp.h"
 #include "../platform/storage.h"
 #include <stdatomic.h>
 #include <stdlib.h>

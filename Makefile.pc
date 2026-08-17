@@ -1,25 +1,37 @@
-# Makefile.pc - Portable Linux build for pipensx-video-downloader
-# Requires: gcc/clang, libcurl-dev, pthreads (usually built-in)
+# Makefile.pc - Portable Linux build for PipensX Video Downloader
+# Requires: gcc/clang (C11), libcurl-dev, libssl-dev, pthreads
 
 CC      ?= cc
 CFLAGS  := -std=c11 -Wall -Wextra -O2 -I. -I./core
-LDFLAGS := -lcurl -lpthread
+LDFLAGS := $(shell pkg-config --libs openssl 2>/dev/null || echo "-lssl -lcrypto") -lcurl -lpthread
 TARGET  := pipensx-video-downloader
 
-CORE_SOURCES := $(wildcard core/*.c)
-CORE_HEADERS := $(wildcard core/*.h)
+CORE_SRCS := $(wildcard core/*.c)
+VENDOR_SRCS := vendor/dht/dht.c
+UTP_SRCS := $(wildcard core/libutp/*.cpp)
 
-OBJECTS := $(CORE_SOURCES:.c=.o)
+# libutp files are C++, compile as C++17
+CXXFLAGS := -std=c++17 -Wall -O2 -I. -I./core -I./core/libutp
+
+OBJECTS := $(CORE_SRCS:.c=.o)
+VENDOR_OBJS := vendor/dht/dht.o
+UTP_OBJS := $(UTP_SRCS:.cpp=.o)
 
 .PHONY: all clean test
 
 all: $(TARGET)
 
-$(TARGET): $(OBJECTS)
+$(TARGET): $(OBJECTS) $(VENDOR_OBJS) $(UTP_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-core/%.o: core/%.c $(CORE_HEADERS)
+core/%.o: core/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+vendor/dht/%.o: vendor/dht/%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+core/libutp/%.o: core/libutp/%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
 clean:
-	rm -f $(TARGET) $(OBJECTS)
+	rm -f $(TARGET) $(OBJECTS) $(VENDOR_OBJS) $(UTP_OBJS)

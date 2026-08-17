@@ -1,3 +1,5 @@
+/* Enable POSIX+GNU extensions for getaddrinfo, gai_strerror, etc. */
+#define _GNU_SOURCE
 #include "net.h"
 #include "util.h"
 #include <string.h>

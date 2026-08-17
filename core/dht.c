@@ -6,7 +6,7 @@
 #include "util.h"
 /* dht.h needs stdio.h for FILE* declaration */
 #include <stdio.h>
-#include "../../vendor/dht/dht.h"
+#include "../vendor/dht/dht.h" /* vendored jech's Kademlia DHT */
 #include <poll.h>
 #include <pthread.h>
 #include <stdatomic.h>
