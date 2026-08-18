@@ -39,6 +39,10 @@
 // as evidenced by multiply-defined symbols found at link time.
 #define FORCEINLINE inline __attribute__((always_inline))
 #endif
+#elif defined(__cplusplus)
+#ifndef FORCEINLINE
+#define FORCEINLINE inline
+#endif
 #endif
 
 // Utility templates

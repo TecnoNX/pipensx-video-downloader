@@ -1,0 +1,79 @@
+# Makefile.Linux - Compilar pipensx-video-downloader para Linux (testing)
+#
+# Este Makefile compila el downloader de videos para Linux
+# con el catalog parser y el torrent engine para testing.
+#
+# Uso:
+#   make linux          # Compilar para Linux
+#   make linux-clean    # Limpiar build
+#   make linux-test     # Compilar y ejecutar tests
+#   make linux-run      # Ejecutar el downloader
+
+# Configuracion basica
+APP_NAME := pipensx-video-downloader
+CC := gcc
+CFLAGS := -O2 -Wall -Wextra -std=c11 -D_POSIX_C_SOURCE=200809L
+LDFLAGS := -lcurl -lpthread -lssl -lcrypto
+INCLUDES := -I. -Isrc/core -Isrc/app
+
+# Directorios de fuente
+SRC_DIR := src
+CORE_DIR := $(SRC_DIR)/core
+APP_DIR := $(SRC_DIR)/app
+
+# Archivos de fuente
+CORE_SOURCES := $(wildcard $(CORE_DIR)/*.c)
+APP_SOURCES := $(wildcard $(APP_DIR)/*.c)
+ALL_SOURCES := $(CORE_SOURCES) $(APP_SOURCES)
+
+# Archivos de objeto
+CORE_OBJECTS := $(CORE_SOURCES:$(CORE_DIR)/%.c=$(CORE_DIR)/%.o)
+APP_OBJECTS := $(APP_SOURCES:$(APP_DIR)/%.c=$(APP_DIR)/%.o)
+ALL_OBJECTS := $(CORE_OBJECTS) $(APP_OBJECTS)
+
+# Target principal
+TARGET := $(APP_NAME)
+
+# Regla por defecto
+.PHONY: all linux linux-clean linux-test linux-run
+
+all: linux
+
+linux: $(TARGET)
+
+$(TARGET): $(ALL_OBJECTS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+# Reglas de compilacion para archivos C
+$(CORE_DIR)/%.o: $(CORE_DIR)/%.c
+	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
+
+$(APP_DIR)/%.o: $(APP_DIR)/%.c
+	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
+
+# Limpiar archivos de objeto
+clean: linux-clean
+
+linux-clean:
+	rm -f $(CORE_OBJECTS) $(APP_OBJECTS) $(TARGET)
+
+# Compilar y ejecutar tests
+linux-test: $(TARGET)
+	@echo "Ejecutando tests..."
+	./$(TARGET) --test
+
+# Ejecutar el downloader
+linux-run: $(TARGET)
+	@echo "Ejecutando pipensx-video-downloader..."
+	./$(TARGET)
+
+# Ayuda
+help:
+	@echo "PipensX Video Downloader - Makefile para Linux (testing)"
+	@echo ""
+	@echo "Uso:"
+	@echo "  make linux          - Compilar para Linux"
+	@echo "  make linux-clean    - Limpiar build"
+	@echo "  make linux-test     - Compilar y ejecutar tests"
+	@echo "  make linux-run      - Ejecutar el downloader"
+	@echo "  make help           - Mostrar esta ayuda"

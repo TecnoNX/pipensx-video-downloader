@@ -1,31 +1,27 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
-#include "../core/metainfo.h"
+#include "core/metainfo.h"
 
 typedef struct storage storage_t;
 
+// Storage file modes
 typedef enum {
     STORAGE_FILE_DISK = 0,
     STORAGE_FILE_SINK = 1,
-    STORAGE_FILE_SKIP = 2,
+    STORAGE_FILE_SKIP = 2
 } storage_file_mode_t;
 
+// Storage sink function pointer
 typedef int (*storage_sink_fn)(void *user, uint32_t file_index,
                                int64_t file_offset,
                                const uint8_t *data, size_t len);
 
+// Storage file configuration
 typedef struct {
     storage_file_mode_t mode;
     storage_sink_fn sink;
     void *user;
-    /*
-     * IMPROVEMENT_PLAN F-B: prefix of a SINK file already consumed by a
-     * previous session's installer (from the install journal). Pieces that
-     * lie entirely below this mark are reported as skipped (no re-download);
-     * a piece straddling the mark is re-downloaded and only its tail at/after
-     * the mark is delivered to the sink. 0 = plain sink behaviour.
-     */
     uint64_t ready_bytes;
 } storage_file_config_t;
 
