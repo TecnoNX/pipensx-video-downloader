@@ -12,7 +12,7 @@
  * - Filtros por genero, rating, tipo
  */
 
-#include "../movie_catalog.h"
+#include "movie_catalog.h"
 #include <switch.h>
 #include <borealis/borealis.hpp>
 #include <borealis/application.hpp>
