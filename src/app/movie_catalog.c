@@ -258,19 +258,31 @@ static const char *json_get_string(const JsonValue *obj, const char *key) {
     return "";
 }
 
-/* Get int value */
+/* Get int value — handles both JSON_NUMBER and numeric JSON_STRING */
 static int json_get_int(const JsonValue *obj, const char *key, int default_val) {
     JsonValue *val = json_get(obj, key);
-    if (val && val->type == JSON_NUMBER)
+    if (!val) return default_val;
+    if (val->type == JSON_NUMBER)
         return (int)val->num_value;
+    if (val->type == JSON_STRING) {
+        char *endptr;
+        long v = strtol(val->str_value, &endptr, 10);
+        if (endptr > val->str_value) return (int)v;
+    }
     return default_val;
 }
 
-/* Get double value */
+/* Get double value — handles both JSON_NUMBER and numeric JSON_STRING */
 static double json_get_double(const JsonValue *obj, const char *key, double default_val) {
     JsonValue *val = json_get(obj, key);
-    if (val && val->type == JSON_NUMBER)
+    if (!val) return default_val;
+    if (val->type == JSON_NUMBER)
         return val->num_value;
+    if (val->type == JSON_STRING) {
+        char *endptr;
+        double v = strtod(val->str_value, &endptr);
+        if (endptr > val->str_value) return v;
+    }
     return default_val;
 }
 
@@ -525,18 +537,30 @@ MovieEntry *catalog_get_by_hash(MovieCatalog *catalog, const char *info_hash) {
 MatchResult *catalog_search(MovieCatalog *catalog, const char *query, int *match_count) {
     if (!catalog || !query) return NULL;
     
-    // Simple search: find all entries matching the query in title or description
+    // Simple search: find all entries matching the query in title, description, or genre
     int count = 0;
     for (size_t i = 0; i < catalog->count; i++) {
-        char title_lower[256], query_lower[256];
+        char title_lower[256], desc_lower[1024], genre_lower[256], query_lower[256];
         strncpy(title_lower, catalog->entries[i].title, sizeof(title_lower));
+        title_lower[sizeof(title_lower) - 1] = '\0';
+        strncpy(desc_lower, catalog->entries[i].description, sizeof(desc_lower));
+        desc_lower[sizeof(desc_lower) - 1] = '\0';
+        strncpy(genre_lower, catalog->entries[i].genre, sizeof(genre_lower));
+        genre_lower[sizeof(genre_lower) - 1] = '\0';
         strncpy(query_lower, query, sizeof(query_lower));
+        query_lower[sizeof(query_lower) - 1] = '\0';
         for (size_t j = 0; j < strlen(title_lower); j++)
             title_lower[j] = tolower(title_lower[j]);
+        for (size_t j = 0; j < strlen(desc_lower); j++)
+            desc_lower[j] = tolower(desc_lower[j]);
+        for (size_t j = 0; j < strlen(genre_lower); j++)
+            genre_lower[j] = tolower(genre_lower[j]);
         for (size_t j = 0; j < strlen(query_lower); j++)
             query_lower[j] = tolower(query_lower[j]);
         
-        if (strstr(title_lower, query_lower) != NULL) {
+        if (strstr(title_lower, query_lower) != NULL ||
+            strstr(desc_lower, query_lower) != NULL ||
+            strstr(genre_lower, query_lower) != NULL) {
             count++;
         }
     }
@@ -547,18 +571,38 @@ MatchResult *catalog_search(MovieCatalog *catalog, const char *query, int *match
     MatchResult *results = (MatchResult *)calloc(count, sizeof(MatchResult));
     int idx = 0;
     for (size_t i = 0; i < catalog->count; i++) {
-        char title_lower[256], query_lower[256];
+        char title_lower[256], desc_lower[1024], genre_lower[256], query_lower[256];
         strncpy(title_lower, catalog->entries[i].title, sizeof(title_lower));
+        title_lower[sizeof(title_lower) - 1] = '\0';
+        strncpy(desc_lower, catalog->entries[i].description, sizeof(desc_lower));
+        desc_lower[sizeof(desc_lower) - 1] = '\0';
+        strncpy(genre_lower, catalog->entries[i].genre, sizeof(genre_lower));
+        genre_lower[sizeof(genre_lower) - 1] = '\0';
         strncpy(query_lower, query, sizeof(query_lower));
+        query_lower[sizeof(query_lower) - 1] = '\0';
         for (size_t j = 0; j < strlen(title_lower); j++)
             title_lower[j] = tolower(title_lower[j]);
+        for (size_t j = 0; j < strlen(desc_lower); j++)
+            desc_lower[j] = tolower(desc_lower[j]);
+        for (size_t j = 0; j < strlen(genre_lower); j++)
+            genre_lower[j] = tolower(genre_lower[j]);
         for (size_t j = 0; j < strlen(query_lower); j++)
             query_lower[j] = tolower(query_lower[j]);
         
         if (strstr(title_lower, query_lower) != NULL) {
             results[idx].entry = &catalog->entries[i];
-            results[idx].score = 100; // Perfect match
+            results[idx].score = 100; // Perfect title match
             results[idx].reason = "Title match";
+            idx++;
+        } else if (strstr(desc_lower, query_lower) != NULL) {
+            results[idx].entry = &catalog->entries[i];
+            results[idx].score = 80; // Description match
+            results[idx].reason = "Description match";
+            idx++;
+        } else if (strstr(genre_lower, query_lower) != NULL) {
+            results[idx].entry = &catalog->entries[i];
+            results[idx].score = 60; // Genre match
+            results[idx].reason = "Genre match";
             idx++;
         }
     }
