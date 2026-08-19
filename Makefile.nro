@@ -1,0 +1,76 @@
+# Makefile.nro - Generate .nro from ELF (requires devkitPRO)
+#
+# If devkitPRO is installed (elf2nro + nacp-tool available),
+# this target builds a complete Switch homebrew package.
+#
+# Usage:
+#   make -f Makefile.nro     # Build .nro from pre-compiled ELF
+#   make -f Makefile.nro all # Full build: compile + package
+#
+# Prerequisites:
+#   - devkitPRO installed at /opt/devkitpro
+#   - devkitARM (arm-none-eabi toolchain)
+#   - libnx (for elf2nro, nacp-tool)
+#
+# If devkitPRO is NOT installed, this prints instructions
+# instead of failing silently.
+
+APP_NAME := pipensx-video-downloader
+DEVKITPRO ?= /opt/devkitpro
+DEVKITARM ?= $(DEVKITPRO)/devkitARM
+PREFIX ?= $(DEVKITARM)/bin/arm-none-eabi
+NRO_ELF ?= $(BUILD_DIR)/$(APP_NAME).elf
+NRO_OUT ?= $(BUILD_DIR)/$(APP_NAME).nro
+NACP ?= $(ROOT)/resources/$(APP_NAME).nacp
+ICON ?= $(ROOT)/resources/icon.png
+ROOT ?= $(CURDIR)
+BUILD_DIR ?= $(ROOT)/build-switch
+
+# Check if elf2nro exists
+ELF2NRO := $(DEVKITPRO)/libnx/tools/elf2nro
+NACPTOOL := $(DEVKITPRO)/libnx/tools/nacp_tool
+
+.PHONY: all nro clean check-deps help
+
+help:
+	@echo "PipensX Video Downloader - NRO Packaging"
+	@echo ""
+	@echo "Targets:"
+	@echo "  all       - Compile + package .nro (requires devkitPRO)"
+	@echo "  nro       - Generate .nro from ELF (elf2nro)"
+	@echo "  clean     - Remove build artifacts"
+	@echo "  check     - Verify devkitPRO setup"
+	@echo ""
+	@echo "Usage: make -f Makefile.nro [all|nro|clean|check|help]"
+
+all: check-deps nro
+	@echo ""
+	@echo "=== Packaging complete ==="
+	@echo "NRO: $(NRO_OUT)"
+
+check-deps:
+	@if [[ ! -f "$(ELF2NRO)" ]]; then \
+		echo "ERROR: elf2nro not found at $(ELF2NRO)"; \
+		echo ""; \
+		echo "Install devkitPRO to build the .nro:"; \
+		echo "  1. sudo pacman -S devkitARM devkitSwitch"; \
+		echo "     (or: sudo apt install devkitpro-pacman && devkitpro-pacman -S devkitARM devkitSwitch)"; \
+		echo "  2. Ensure DEVKITPRO=/opt/devkitpro is set in your environment"; \
+		echo ""; \
+		echo "Until then, you can test on Linux with:"; \
+		echo "  make -f Makefile.Linux"; \
+		echo ""; \
+		echo "Or use the sdcard structure in sdcard/switch/$(APP_NAME)/"; \
+		echo ""; \
+		exit 1; \
+	fi
+
+nro: $(NRO_OUT)
+
+$(NRO_OUT): $(NRO_ELF) $(NACP) $(ICON)
+	@mkdir -p $(dir $@)
+	$(ELF2NRO) $< $@ --icon=$(ICON) --nacp=$(NACP)
+	@echo "Built: $@"
+
+clean:
+	rm -rf $(BUILD_DIR)/$(APP_NAME).nro $(BUILD_DIR)/$(APP_NAME).elf

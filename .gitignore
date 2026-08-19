@@ -4,7 +4,9 @@ build-golden/
 build-switch/
 *.o
 *.nro
+!Makefile.nro
 *.elf
+!Makefile.elf
 *.a
 *.so
 pipensx-video-downloader

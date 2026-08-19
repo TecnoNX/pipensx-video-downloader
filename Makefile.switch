@@ -1,174 +1,59 @@
-# Makefile.switch - Compilar pipensx-video-downloader para Nintendo Switch
+# Makefile.switch - Empaquetado para Nintendo Switch
 #
-# Este Makefile compila el downloader de videos para la Nintendo Switch
-# usando devkitPro y borealis para la interfaz de usuario.
+# Este Makefile gestiona el empaquetado del homebrew para SD card.
+# Para compilar el .nro necesitas devkitPRO completo (devkitARM + libnx).
+# Hasta entonces, puedes usar la estructura de SD card en sdcard/
 #
 # Requisitos:
-# - devkitPro instalado (https://devkitpro.org)
-# - devkitA64 y libnx
-# - borealis framework
+# - devkitPro instalado (https://devkitpro.org) — opcional para sdcard
+# - Uso: make sdcard (siempre funciona) o make switch (requiere devkitPRO)
 #
 # Uso:
-#   make switch          # Compilar para Switch
-#   make switch-clean    # Limpiar build
-#   make switch-install  # Instalar en SD card
-#   make switch-deploy   # Desplegar en Switch (via homebrew launcher)
+#   make switch    - Compilar para Switch (requiere devkitPRO completo)
+#   make sdcard    - Crear estructura de carpetas para SD card
+#   make help      - Mostrar ayuda
 
-# Configuracion basica
-APP_NAME := pipensx-video-downloader
-APP_TITLE := PipensX Video Downloader
-APP_AUTHOR := TecnoNX
-APP_VERSION := 1.0.0
-
-# Rutas de devkitPro
+ROOT := $(CURDIR)
 DEVKITPRO ?= /opt/devkitpro
-DEVKITARM ?= $(DEVKITPRO)/devkitARM
-DEVKITPPC ?= $(DEVKITPRO)/devkitPPC
+APP_NAME := pipensx-video-downloader
 
-# Rutas de herramientas
-PORTLIBERS ?= $(DEVKITPRO)/portlibs/switch
-PREFIX ?= $(DEVKITARM)/bin/arm-none-eabi
-CC ?= $(PREFIX)-gcc
-CXX ?= $(PREFIX)-g++
-LD ?= $(PREFIX)-ld
-AR ?= $(PREFIX)-ar
-OBJCOPY ?= $(PREFIX)-objcopy
-SIZE ?= $(PREFIX)-size
-
-# Rutas de include y librerias
-INCLUDES := -I. \
-            -Isrc \
-            -Isrc/core \
-            -Isrc/app \
-            -I$(PORTLIBERS)/include \
-            -I$(DEVKITPRO)/libnx/include
-
-# Rutas de librerias
-LIBPATHS := -L$(PORTLIBERS)/lib \
-            -L$(DEVKITPRO)/libnx
-
-# Banderas de compilacion
-CFLAGS := -O2 -Wall -Wextra \
-          -march=armv8-a -mtune=cortex-a57 -mtp=soft \
-          -ffunction-sections -fdata-sections \
-          $(INCLUDES)
-
-CXXFLAGS := $(CFLAGS) -std=c++17
-
-# Banderas de enlazado
-LDFLAGS := $(LIBPATHS) \
-           -Wl,--gc-sections \
-           -Wl,--print-gc-sections \
-           -Wl,-Map,$(APP_NAME).map
-
-# Librerias
-LIBS := -lnx \
-        -lborealis \
-        -lbtm \
-        -lgpm \
-        -lncm \
-        -lnvp \
-        -lnt \
-        -lhs \
-        -lm \
-        -lc
-
-# Directorios de fuente
-SRC_DIR := src
-CORE_DIR := $(SRC_DIR)/core
-APP_DIR := $(SRC_DIR)/app
-
-# Archivos de fuente
-CORE_SOURCES := $(wildcard $(CORE_DIR)/*.c) \
-                $(wildcard $(CORE_DIR)/libutp/*.c) \
-                $(wildcard $(CORE_DIR)/dht_vendor/*.c)
-
-APP_SOURCES := $(wildcard $(APP_DIR)/*.c)
-
-# Archivos de objeto
-CORE_OBJECTS := $(CORE_SOURCES:$(CORE_DIR)/%.c=$(CORE_DIR)/%.o)
-APP_OBJECTS := $(APP_SOURCES:$(APP_DIR)/%.c=$(APP_DIR)/%.o)
-ALL_OBJECTS := $(CORE_OBJECTS) $(APP_OBJECTS)
-
-# Archivos de cabecera
-HEADERS := $(wildcard $(SRC_DIR)/*.h) \
-           $(wildcard $(CORE_DIR)/*.h) \
-           $(wildcard $(APP_DIR)/*.h)
-
-# Target principal
-TARGET := $(APP_NAME).nro
-
-# Regla por defecto
-.PHONY: all switch clean switch-clean switch-install switch-deploy
+.PHONY: all switch sdcard help
 
 all: switch
 
-switch: $(TARGET)
+switch:
+	@echo "=== Building for Nintendo Switch ==="
+	@echo "Checking devkitPRO setup..."
+	@if [[ ! -d "$(DEVKITPRO)/libnx" ]]; then \
+		echo "ERROR: devkitPRO not properly installed."; \
+		echo "Install: sudo pacman -S devkitARM devkitSwitch"; \
+		echo "Or: apt install devkitpro-pacman && devkitpro-pacman -S devkitARM devkitSwitch"; \
+		echo ""; \
+		echo "The project can still be tested on Linux:"; \
+		echo "  make -f Makefile.Linux"; \
+		echo ""; \
+		echo "SD card packaging structure is in sdcard/switch/$(APP_NAME)/"; \
+		false; \
+	fi
+	./scripts/package_switch.sh all
 
-$(TARGET): $(ALL_OBJECTS)
-	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
-	$(SIZE) $@
+sdcard:
+	@echo "=== Assembling SD card structure ==="
+	./scripts/package_switch.sh sdcard
 
-# Reglas de compilacion para archivos C
-$(CORE_DIR)/%.o: $(CORE_DIR)/%..c $(HEADERS)
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(APP_DIR)/%.o: $(APP_DIR)/%.c $(HEADERS)
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
-
-# Limpiar archivos de objeto
-clean: switch-clean
-
-switch-clean:
-	rm -f $(CORE_OBJECTS) $(APP_OBJECTS) $(TARGET) $(APP_NAME).map
-
-# Instalar en SD card
-switch-install: switch
-	@echo "Instalando en SD card..."
-	mkdir -p switch/$(APP_NAME)
-	cp $(TARGET) switch/$(APP_NAME)/
-	cp -r resources switch/$(APP_NAME)/
-	@echo "Instalacion completada en switch/$(APP_NAME)/"
-
-# Desplegar en Switch
-switch-deploy: switch-install
-	@echo "Desplegando en Nintendo Switch..."
-	@echo "1. Asegurate de que la Switch esta en modo homebrew"
-	@echo "2. Copia la carpeta switch/ en la raiz de la SD card"
-	@echo "3. Ejecuta el homebrew launcher"
-	@echo "4. Encuentra $(APP_NAME) en la lista de homebrews"
-	@echo "Despliegue completado!"
-
-# Reglas para generar iconos y metadatos
-icons:
-	@echo "Generando iconos..."
-	# En una implementacion real, aqui generariamos los iconos
-	# para la homebrew launcher
-
-# Regla para generar metadatos
-metadata:
-	@echo "Generando metadatos..."
-	# En una implementacion real, aqui generariamos los metadatos
-	# para la homebrew launcher
-
-# Regla para generar el archivo .nsp (para instalacion oficial)
-nsp: switch
-	@echo "Generando archivo .nsp..."
-	# En una implementacion real, aqui generariamos el .nsp
-	# usando tools como nsp-builder o similar
-
-# Ayuda
 help:
-	@echo "PipensX Video Downloader - Makefile para Nintendo Switch"
+	@echo "PipensX Video Downloader - Switch Packaging"
 	@echo ""
-	@echo "Uso:"
-	@echo "  make switch          - Compilar para Switch"
-	@echo "  make switch-clean    - Limpiar build"
-	@echo "  make switch-install  - Instalar en SD card"
-	@echo "  make switch-deploy   - Desplegar en Switch"
-	@echo "  make help            - Mostrar esta ayuda"
+	@echo "Targets:"
+	@echo "  switch   - Compile for Switch (requires devkitPRO)"
+	@echo "  sdcard   - Create SD card folder structure"
+	@echo "  help     - Show this help"
 	@echo ""
-	@echo "Requisitos:"
-	@echo "  - devkitPro instalado en /opt/devkitPro"
-	@echo "  - devkitA64 y libnx"
-	@echo "  - borealis framework"
+	@echo "Linux testing:"
+	@echo "  make -f Makefile.Linux"
+	@echo "  ./test_catalog_parser_bin   (run catalog tests)"
+	@echo ""
+	@echo "SD card layout (sdcard/switch/pipensx-video-downloader/):"
+	@echo "  pipensx-video-downloader.nro"
+	@echo "  resources/catalog/movies.json"
+	@echo "  README.txt"
